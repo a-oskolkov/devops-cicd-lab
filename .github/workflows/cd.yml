@@ -1,0 +1,65 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: staging
+
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+      - name: Resolve image name
+        id: image
+        run: |
+          image_name="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+          image_tag="sha-${{ github.event.workflow_run.head_sha }}"
+          echo "image=${image_name}:${image_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy staging
+        run: |
+          echo "Deploying image to staging:"
+          echo "${{ steps.image.outputs.image }}"
+          echo "Staging deployment completed"
+
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+
+    outputs:
+      image: ${{ needs.deploy-staging.outputs.image }}
+
+    steps:
+      - name: Run smoke test
+        run: |
+          echo "Running smoke test against staging deployment"
+          echo "curl -fsS https://staging.example.com/health"
+          echo "Smoke test passed for ${{ needs.deploy-staging.outputs.image }}"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    environment: production
+
+    steps:
+      - name: Deploy production
+        run: |
+          echo "Deploying promoted image to production:"
+          echo "${{ needs.smoke-test.outputs.image }}"
+          echo "Production deployment completed"

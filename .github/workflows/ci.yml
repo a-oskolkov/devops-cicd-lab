@@ -179,7 +179,7 @@ jobs:
         with:
           images: ${{ steps.image.outputs.image_name }}
           tags: |
-            type=sha
+            type=sha,format=long,prefix=sha-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
