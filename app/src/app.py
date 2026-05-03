@@ -22,5 +22,13 @@ def health():
     return jsonify({"status": "ok"})
 
 
+@app.route("/greeting")
+def greeting():
+    if os.environ.get("FEATURE_NEW_GREETING", "").lower() == "true":
+        return jsonify({"greeting": "Hello from the new greeting!"})
+
+    return jsonify({"greeting": "Hello from the old greeting!"})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
